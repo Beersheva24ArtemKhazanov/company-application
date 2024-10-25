@@ -23,7 +23,6 @@ public class CompanyItems {
     final static float MAX_FACTOR = 4;
     final static String[] DEPARTMENTS = { "QA", "Audit", "Development", "Management" };
 
-    // TODO
     public static Item[] getItems(Company company) {
         CompanyItems.company = company;
         Item[] res = {
@@ -44,10 +43,11 @@ public class CompanyItems {
                 Item.of("Hire Wage Employee", CompanyItems::addWageEmployee),
                 Item.of("Hire Sales Person", CompanyItems::addSalesPerson),
                 Item.of("Hire Manager", CompanyItems::addManager),
-                Item.of("<-- Back", CompanyItems::goBack),
-                Item.ofExit()
+                Item.of("<-- Back", i -> {
+                }, true)
         };
-        Main.performMenu("Kinds of adding Employees", subItems);
+        Menu subMenu = new Menu("Adding Employee byType", subItems);
+        subMenu.perform(io);
     }
 
     static void goBack(InputOutput io) {
@@ -56,60 +56,76 @@ public class CompanyItems {
     }
 
     static void addEmployee(InputOutput io) {
-        addEmployeeByClassName("", io);
-
+        Employee empl = enterEmployee(io);
+        addIntoCompany(io, empl);
     }
 
-    private static void addEmployeeByClassName(String className, InputOutput io) {
-        io.writeLine("\n");
-        Employee empl = null;
-        long id = io.readNumberRange(String.format("Enter ID value in the range [%d-%d]", MIN_ID, MAX_ID),
-                "Wrong ID value", MIN_ID, MAX_ID).longValue();
-        int salary = io.readNumberRange(String.format("Enter salary value in the range [%d-%d]", MIN_SALARY, MAX_SALARY),
-                        "Wrong salary value", MIN_SALARY, MAX_SALARY).intValue();
-        HashSet<String> departmentsSet = new HashSet<>(List.of(DEPARTMENTS));
-        String department = io.readStringOptions("Enter department from " + departmentsSet,
-                "Must be one out from " + departmentsSet, departmentsSet);
-
-        if (className == "") {
-            empl = new Employee(id, salary, department);
-        }
-
-        if (className == "Manager") {
-            float factor = io.readNumberRange(String.format("Enter factor value in the range [%d-%d]", MIN_FACTOR, MAX_FACTOR), 
-            "Wrong factor format", MIN_FACTOR, MAX_FACTOR).floatValue();
-            empl = new Manager(id, salary, department, factor);
-        }
-
-        if (className == "WageEmployee" || className == "SalesPerson") {
-            int wage = io.readNumberRange(String.format("Enter wage value in the range [%d-%d]", MIN_WAGE, MAX_WAGE),
-             "Wrong wage format", MIN_WAGE, MAX_WAGE).intValue();
-            int hours = io.readNumberRange(String.format("Enter hours value in the range [%d-%d]", MIN_HOURS, MAX_HOURS),
-             "Wrong hour format", MIN_HOURS, MAX_HOURS).intValue();
-            if (className == "SalesPerson") {
-                float percent = io.readNumberRange(String.format("Enter percent value in the range [%d-%d]", MIN_PERCENT, MAX_PERCENT), 
-                "Wrong percent format", MIN_PERCENT, MAX_PERCENT).floatValue();
-                long sales = io.readNumberRange(String.format("Enter sales value in the range [%d-%d]", MIN_SALES, MAX_SALES),
-                 "Wrong sales format", MIN_SALES, MAX_SALES).longValue();
-                empl = new SalesPerson(id, salary, department, wage, hours, percent, sales);
-            }
-            empl = new WageEmployee(id, salary, department, wage, hours);
-        }
+    private static void addIntoCompany(InputOutput io, Employee empl) {
         company.addEmployee(empl);
         io.writeLine("You are added the following Employee into the company");
         io.writeLine(empl);
     }
 
+    private static Employee enterEmployee(InputOutput io) {
+        io.writeLine("\n");
+        long id = io.readNumberRange(String.format("Enter ID value in the range [%d-%d]", MIN_ID, MAX_ID),
+                "Wrong ID value", MIN_ID, MAX_ID).longValue();
+        int salary = io
+                .readNumberRange(String.format("Enter salary value in the range [%d-%d]", MIN_SALARY, MAX_SALARY),
+                        "Wrong salary value", MIN_SALARY, MAX_SALARY)
+                .intValue();
+        HashSet<String> departmentsSet = new HashSet<>(List.of(DEPARTMENTS));
+        String department = io.readStringOptions("Enter department from " + departmentsSet,
+                "Must be one out from " + departmentsSet, departmentsSet);
+        return new Employee(id, salary, department);
+    }
+
     static void addWageEmployee(InputOutput io) {
-        addEmployeeByClassName("WageEmployee", io);
+        WageEmployee wageEmpl = enterWageEmployee(io);
+        addIntoCompany(io, wageEmpl);
+    }
+
+    private static WageEmployee enterWageEmployee(InputOutput io) {
+        Employee empl = enterEmployee(io);
+        int wage = io.readNumberRange(String.format("Enter wage value in the range [%d-%d]", MIN_WAGE, MAX_WAGE),
+                "Wrong wage format", MIN_WAGE, MAX_WAGE).intValue();
+        int hours = io.readNumberRange(String.format("Enter hours value in the range [%d-%d]", MIN_HOURS, MAX_HOURS),
+                "Wrong hour format", MIN_HOURS, MAX_HOURS).intValue();
+        return new WageEmployee(empl.getId(), empl.computeSalary(), empl.getDepartment(), wage, hours);
     }
 
     static void addSalesPerson(InputOutput io) {
-        addEmployeeByClassName("SalesPerson", io);
+        SalesPerson salesPers = enterSalesPerson(io);
+        addIntoCompany(io, salesPers);
+
+    }
+
+    private static SalesPerson enterSalesPerson(InputOutput io) {
+        WageEmployee wageEmpl = enterWageEmployee(io);
+        float percent = io.readNumberRange(
+                "Enter percent value in the range [" + MIN_PERCENT + " - " + MAX_PERCENT + "]",
+                "Wrong percent format", MIN_PERCENT, MAX_PERCENT).floatValue();
+        long sales = io
+                .readNumberRange(String.format("Enter sales value in the range [%d-%d]", MIN_SALES, MAX_SALES),
+                        "Wrong sales format", MIN_SALES, MAX_SALES)
+                .longValue();
+        return new SalesPerson(wageEmpl.getId(), wageEmpl.computeSalary(), wageEmpl.getDepartment(), wageEmpl.getWage(),
+                wageEmpl.getHours(), percent, sales);
     }
 
     static void addManager(InputOutput io) {
-        addEmployeeByClassName("Manager", io);
+        Manager manager = enterManager(io);
+        addIntoCompany(io, manager);
+    }
+
+    private static Manager enterManager(InputOutput io) {
+        Employee empl = enterEmployee(io);
+        float factor = io
+                .readNumberRange("Enter factor value in the range [" + MIN_FACTOR + " - " + MAX_FACTOR + "]",
+                        "Wrong factor format", MIN_FACTOR, MAX_FACTOR)
+                .floatValue();
+        return new Manager(empl.getId(), empl.computeSalary(), empl.getDepartment(), factor);
+
     }
 
     static void displayEmployeeData(InputOutput io) {
